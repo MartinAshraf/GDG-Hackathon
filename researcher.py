@@ -1,6 +1,7 @@
 # agents/researcher.py
 import os
 import time
+from dotenv import load_dotenv
 
 # Libraries for Scrapping
 from bs4 import BeautifulSoup
@@ -10,8 +11,10 @@ import json
 # For Gemini Api
 from google import genai
 
-# os.environ["GEMINI_API_KEY"] = "AIzaSyBe8J0grh-nufu08WVNX-p7amjtHyVAlDY"
-myclient = genai.Client(api_key="AIzaSyBe8J0grh-nufu08WVNX-p7amjtHyVAlDY")
+load_dotenv()
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+myclient = genai.Client(api_key=GEMINI_API_KEY)
 
 
 # ─────────────────────────────────────────

@@ -4,6 +4,7 @@ import shutil
 import tempfile
 from google import genai
 from git import Repo
+from dotenv import load_dotenv
 
 # ─────────────────────────────────────────
 # SETUP
