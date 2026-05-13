@@ -10,7 +10,11 @@ from dotenv import load_dotenv
 # SETUP
 # ─────────────────────────────────────────
 
-myclient = genai.Client(api_key="AIzaSyBe8J0grh-nufu08WVNX-p7amjtHyVAlDY")
+
+load_dotenv()
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+myclient = genai.Client(api_key=GEMINI_API_KEY)
 
 # ─────────────────────────────────────────
 # PART 1 — CLONE REPO INTO A SANDBOX
@@ -23,7 +27,8 @@ def clone_to_sandbox(repo_url):
     This is an isolated copy — original repo is never touched.
     """
 
-    sandbox_dir = tempfile.mkdtemp(prefix="sandbox_")
+    sandbox_dir = os.path.join(os.path.dirname(__file__), "sandbox")
+    os.makedirs(sandbox_dir, exist_ok=True)
     print(f"\n📦 Cloning repo into sandbox...")
     print(f"   Sandbox path: {sandbox_dir}")
 
@@ -263,6 +268,6 @@ def run_coder_agent(repo_url, threat_report_path="threat_report.json"):
 if __name__ == "__main__":
 
     # Put any public Python repo here to test
-    TEST_REPO = "https://github.com/mitsuhiko/flask"
+    TEST_REPO = "https://github.com/erev0s/VAmPI"
 
     result = run_coder_agent(TEST_REPO)
