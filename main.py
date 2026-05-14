@@ -14,8 +14,8 @@ from pr_agent import run_pr_agent
 # CONFIG
 # ─────────────────────────────────────────
 
-TARGET_REPO   = "https://github.com/erev0s/VAmPI"
-MAX_RETRIES   = 3
+TARGET_REPO = "https://github.com/MartinAshraf/VAmPI"
+MAX_RETRIES = 3
 
 # ═════════════════════════════════════════
 # STEP 1 — CLONE (happens ONCE, before everything)
@@ -80,8 +80,8 @@ print("STEP 4+5 — CODER / QA LOOP")
 print("=" * 55)
 
 previous_error = None
-coder_result   = None
-qa_result      = None
+coder_result = None
+qa_result = None
 
 for attempt in range(1, MAX_RETRIES + 1):
 
@@ -173,10 +173,12 @@ if qa_result and qa_result["passed"] and coder_result:
             print(f"   ✗ Could not read {relative_path}: {e}")
             continue
 
-        files_to_push.append({
-            "file_path": relative_path,   # e.g. "app/views.py"
-            "new_code":  full_content,     # full updated file content
-        })
+        files_to_push.append(
+            {
+                "file_path": relative_path,  # e.g. "app/views.py"
+                "new_code": full_content,  # full updated file content
+            }
+        )
 
     if files_to_push:
         pr_result = run_pr_agent(

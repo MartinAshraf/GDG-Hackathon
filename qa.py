@@ -1,9 +1,11 @@
 import os
 import json
-from google import genai
-from google.genai import types
+
+# from google import genai
+# from google.genai import types
 from dotenv import load_dotenv
 from sandbox_manager import SandboxManager
+from llm import ask
 
 # ─────────────────────────────────────────
 # SETUP
@@ -11,8 +13,6 @@ from sandbox_manager import SandboxManager
 
 load_dotenv()
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-myclient = genai.Client(api_key=GEMINI_API_KEY)
 
 # ── Prompt Injection Guardrail ────────────────────────────────────────────────
 # SECURITY: Test output and code content may contain injected instructions.
@@ -55,7 +55,7 @@ def run_sandbox(sandbox_dir, test_file_path):
 # ─────────────────────────────────────────
 
 
-def analyse_with_gemini(sandbox_result):
+def analyse_with_llm(sandbox_result):
     """
     Sends sandbox output to Gemini for structured diagnosis.
 
@@ -92,15 +92,8 @@ Return a JSON object with this exact shape:
 """
 
     try:
-        response = myclient.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=QA_SYSTEM_PROMPT,
-                response_mime_type="application/json",
-            ),
-        )
-        return json.loads(response.text)
+        raw_text = ask(prompt, system_prompt=QA_SYSTEM_PROMPT, json_mode=True)
+        return json.loads(raw_text)
 
     except Exception as e:
         print(f"   ✗ Gemini analysis failed: {e}")
@@ -154,7 +147,7 @@ def run_qa_agent(sandbox_dir, test_file_path):
         }
 
     # Step 2 — Analyse with Gemini
-    analysis = analyse_with_gemini(sandbox_result)
+    analysis = analyse_with_llm(sandbox_result)
 
     verdict = analysis.get("verdict", "FAIL")
     result = {

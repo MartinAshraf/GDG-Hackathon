@@ -1,0 +1,11 @@
+[
+  {
+    "file": "d:\\Martin\\GDG Hackathon\\GDG-Hackathon\\sandbox\\models\\user_model.py",
+    "line_number": 48,
+    "original_code": "payload = jwt.decode(auth_token, vuln_app.app.config.get('SECRET_KEY'), algorithms=[\"HS256\"])",
+    "fixed_code": "# Added issuer validation to prevent user impersonation\npayload = jwt.decode(auth_token, vuln_app.app.config.get('SECRET_KEY'), algorithms=[\"HS256\"], options={\"require_issuer\": True, \"verify_issuer\": True}, issuer=vuln_app.app.config.get('JWT_ISSUER'))",
+    "vulnerability": "Unity Catalog has a JWT Issuer Validation Bypass that allows complete user impersonation",
+    "severity": "CRITICAL",
+    "status": "FIXED"
+  }
+]

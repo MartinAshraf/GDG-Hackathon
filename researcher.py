@@ -9,12 +9,13 @@ import requests
 import json
 
 # For Gemini Api
-from google import genai
+# from google import genai
+# GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# myclient = genai.Client(api_key=GEMINI_API_KEY)
+from llm import ask
 
 load_dotenv()
-
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-myclient = genai.Client(api_key=GEMINI_API_KEY)
+# print("DEBUG KEY BEING USED:", os.getenv("GEMINI_API_KEY"))
 
 
 # ─────────────────────────────────────────
@@ -36,7 +37,7 @@ def scrape_github_advisories(package_name):
             print(f"  ○ No advisories found")
             return []
         findings = []
-        for card in advisory_cards[:5]:
+        for card in advisory_cards[:3]:
             # ── Title ──
             title_tag = card.find("a", class_="Link--primary")
             title = title_tag.get_text(strip=True) if title_tag else "Unknown"
@@ -118,12 +119,9 @@ def build_threat_report(raw_findings, packages):
     ]
     """
     try:
-        print("\n🤖 Sending to Gemini...")
-        response = myclient.models.generate_content(
-            model="gemini-2.5-flash", contents=prompt
-        )
-        raw_text = response.text.strip()
-        print(f"  Gemini responded ({len(raw_text)} chars)")
+        print("\n🤖 Sending to Groq...")
+        raw_text = ask(prompt)
+        print(f"  Groq responded ({len(raw_text)} chars)")
         # Try parsing directly first
         try:
             return json.loads(raw_text)

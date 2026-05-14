@@ -1,0 +1,44 @@
+[
+  {
+    "package": "connexion",
+    "severity": "HIGH",
+    "description": "The Connexion Logs WordPress plugin does not sanitize and escape a parameter before using it",
+    "fix": "Sanitize and escape the parameter before using it",
+    "pattern_to_find": "wordpress_plugin_parameter"
+  },
+  {
+    "package": "connexion",
+    "severity": "MODERATE",
+    "description": "The Connexion Logs WordPress plugin does not have CSRF check in place when updating",
+    "fix": "Implement CSRF check when updating",
+    "pattern_to_find": "csrf_token"
+  },
+  {
+    "package": "connexion",
+    "severity": "HIGH",
+    "description": "PHP remote file inclusion vulnerability in connexion.php",
+    "fix": "Validate and sanitize user input to prevent remote file inclusion",
+    "pattern_to_find": "include_once"
+  },
+  {
+    "package": "flask",
+    "severity": "MODERATE",
+    "description": "Improper restriction of excessive authentication attempts in pgAdmin 4",
+    "fix": "Implement rate limiting for authentication attempts",
+    "pattern_to_find": "login_attempt"
+  },
+  {
+    "package": "flask",
+    "severity": "CRITICAL",
+    "description": "Unity Catalog has a JWT Issuer Validation Bypass that allows complete user impersonation",
+    "fix": "Validate the JWT issuer to prevent impersonation",
+    "pattern_to_find": "jwt.decode("
+  },
+  {
+    "package": "flask",
+    "severity": "HIGH",
+    "description": "PraisonAI ships and generates a legacy API server with authentication disabled by default",
+    "fix": "Enable authentication for the legacy API server",
+    "pattern_to_find": "auth_disabled=True"
+  }
+]

@@ -95,6 +95,10 @@ def get_dependencies(sandbox_dir):
         print("   ○ No dependency file found — using common web packages as fallback")
         packages = ["Flask", "Django", "requests", "PyJWT", "SQLAlchemy"]
 
+    # Limit to first 10 packages only
+    MAX_PACKAGES = 3
+    packages = packages[:MAX_PACKAGES]
+
     print(f"   Packages: {packages}")
     return {"type": "python", "packages": packages}
 
@@ -143,7 +147,7 @@ def _parse_pyproject(content):
 # ─────────────────────────────────────────
 
 if __name__ == "__main__":
-    sandbox = clone_repo("https://github.com/erev0s/VAmPI")
+    sandbox = clone_repo("https://github.com/MartinAshraf/VAmPI")
     if sandbox:
         deps = get_dependencies(sandbox)
         print(f"\nResult: {deps}")
