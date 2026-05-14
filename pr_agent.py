@@ -1,0 +1,236 @@
+import os
+from datetime import datetime, timezone
+from github import Github, GithubException
+from dotenv import load_dotenv
+
+# ─────────────────────────────────────────
+# SETUP
+# ─────────────────────────────────────────
+
+load_dotenv()
+
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+
+
+# ─────────────────────────────────────────
+# PART 1 — CONNECT AND PARSE REPO
+# ─────────────────────────────────────────
+
+
+def _connect(repo_url):
+    """
+    Connects to GitHub via PyGithub and returns the repo object.
+    Parses owner/repo from the URL.
+    """
+    if not GITHUB_TOKEN:
+        raise EnvironmentError(
+            "GITHUB_TOKEN not set in .env — cannot open Pull Request."
+        )
+
+    clean = repo_url.rstrip("/").replace(".git", "")
+    parts = clean.split("github.com/")[-1].split("/")
+    if len(parts) < 2:
+        raise ValueError(f"Cannot parse owner/repo from URL: {repo_url}")
+
+    owner, repo_name = parts[0], parts[1]
+
+    g = Github(GITHUB_TOKEN)
+    repo = g.get_repo(f"{owner}/{repo_name}")
+    return repo
+
+
+# ─────────────────────────────────────────
+# PART 2 — CREATE BRANCH
+# ─────────────────────────────────────────
+
+
+def _create_branch(repo, branch_name):
+    """
+    Creates a new branch from the repo's default branch (main/master).
+    Returns the branch name on success.
+    """
+    default_branch = repo.default_branch
+    source = repo.get_branch(default_branch)
+
+    repo.create_git_ref(
+        ref=f"refs/heads/{branch_name}",
+        sha=source.commit.sha,
+    )
+    print(f"   ✓ Branch created: {branch_name} (from {default_branch})")
+    return branch_name
+
+
+# ─────────────────────────────────────────
+# PART 3 — COMMIT FILES
+# ─────────────────────────────────────────
+
+
+def _commit_files(repo, branch_name, files_to_push):
+    """
+    Commits each fixed file to the new branch.
+
+    files_to_push: list of {"file_path": "relative/path.py", "new_code": "full content"}
+    PyGithub's update_file() requires the file's current SHA for conflict detection.
+    """
+    committed = []
+
+    for item in files_to_push:
+        file_path = item["file_path"]
+        new_code  = item["new_code"]
+
+        commit_msg = (
+            f"fix(security): patch vulnerability in {os.path.basename(file_path)}\n\n"
+            f"Automated fix by Agentic Code Enhancer\n"
+            f"Timestamp: {datetime.now(timezone.utc).isoformat()}"
+        )
+
+        try:
+            # Get the current file SHA (required by GitHub API for updates)
+            contents = repo.get_contents(file_path, ref=branch_name)
+            repo.update_file(
+                path=contents.path,
+                message=commit_msg,
+                content=new_code,
+                sha=contents.sha,
+                branch=branch_name,
+            )
+            print(f"   ✓ Committed: {file_path}")
+            committed.append(file_path)
+
+        except GithubException as e:
+            if e.status == 404:
+                # File doesn't exist on this branch — create it instead
+                repo.create_file(
+                    path=file_path,
+                    message=commit_msg,
+                    content=new_code,
+                    branch=branch_name,
+                )
+                print(f"   ✓ Created (new): {file_path}")
+                committed.append(file_path)
+            else:
+                print(f"   ✗ Failed to commit {file_path}: {e}")
+
+    return committed
+
+
+# ─────────────────────────────────────────
+# PART 4 — OPEN PULL REQUEST
+# ─────────────────────────────────────────
+
+
+def _open_pull_request(repo, branch_name, committed_files):
+    """
+    Opens a Pull Request on GitHub with a structured description.
+    """
+    title = f"🛡️ [Security] Automated patch — {len(committed_files)} file(s) fixed"
+
+    body = "\n".join([
+        "## 🤖 Automated Security Patch",
+        "",
+        "This Pull Request was opened automatically by the **Agentic Code Enhancer**.",
+        "",
+        "### Pipeline that generated this PR",
+        "1. **GitHub Tool** — Cloned the repository and read its dependencies",
+        "2. **Researcher Agent** — Scraped GitHub Security Advisories for known CVEs",
+        "3. **Coder Agent** — Located and patched vulnerable lines using Google Gemini",
+        "4. **QA Agent** — Ran adversarial tests inside a Docker sandbox (all passed ✅)",
+        "5. **PR Agent** — Opened this Pull Request automatically",
+        "",
+        "### Files Modified",
+        "",
+        "| File | Status |",
+        "|------|--------|",
+        *[f"| `{f}` | ✅ Patched |" for f in committed_files],
+        "",
+        "### Security Constraints Applied During Testing",
+        "- `--network none` — no internet access inside sandbox",
+        "- `--read-only` — read-only filesystem",
+        "- `--memory 128m` — memory cap",
+        "- `--user nobody` — non-root execution",
+        "",
+        "> ⚠️ Please review all changes carefully before merging.",
+        "",
+        "---",
+        f"*Branch: `{branch_name}`* | *Generated by: Agentic Code Enhancer*",
+    ])
+
+    pr = repo.create_pull(
+        title=title,
+        body=body,
+        head=branch_name,
+        base=repo.default_branch,
+    )
+
+    print(f"   ✓ Pull Request opened: {pr.html_url}")
+    return pr.html_url
+
+
+# ─────────────────────────────────────────
+# PART 5 — MAIN FUNCTION
+# ─────────────────────────────────────────
+
+
+def run_pr_agent(repo_url, files_to_push):
+    """
+    Main entry point for the PR Agent.
+
+    Args:
+        repo_url:      Full GitHub URL of the target repo.
+        files_to_push: List of dicts:
+                         [{"file_path": "relative/path.py", "new_code": "full content"}, ...]
+
+    Returns:
+        {"branch": branch_name, "pr_url": url} or {"branch": None, "pr_url": None} on failure.
+    """
+    print("\n📤 PR Agent starting...")
+
+    if not files_to_push:
+        print("   ○ No files to push — skipping")
+        return {"branch": None, "pr_url": None}
+
+    if not GITHUB_TOKEN:
+        print("   ⚠ GITHUB_TOKEN not set — skipping PR")
+        print("   Add GITHUB_TOKEN=your-token to your .env file to enable this step")
+        return {"branch": None, "pr_url": None}
+
+    timestamp   = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    branch_name = f"fix/agent-security-patch-{timestamp}"
+
+    try:
+        # Step 1 — Connect
+        repo = _connect(repo_url)
+        print(f"   ✓ Connected to: {repo.full_name}")
+
+        # Step 2 — Create branch
+        _create_branch(repo, branch_name)
+
+        # Step 3 — Commit fixed files
+        committed = _commit_files(repo, branch_name, files_to_push)
+
+        if not committed:
+            print("   ✗ No files were committed successfully")
+            return {"branch": branch_name, "pr_url": None}
+
+        # Step 4 — Open PR
+        pr_url = _open_pull_request(repo, branch_name, committed)
+
+        print("\n" + "─" * 50)
+        print(f"✓ PR Agent done!")
+        print(f"  Branch : {branch_name}")
+        print(f"  PR URL : {pr_url}")
+        print("─" * 50)
+
+        return {"branch": branch_name, "pr_url": pr_url}
+
+    except EnvironmentError as e:
+        print(f"   ✗ Config error: {e}")
+        return {"branch": None, "pr_url": None}
+
+    except GithubException as e:
+        print(f"   ✗ GitHub API error ({e.status}): {e.data.get('message', str(e))}")
+        return {"branch": None, "pr_url": None}
+
+    except Exception as e:
+        print(f"   ✗ Unexpected error: {e}")
+        return {"branch": None, "pr_url": None}
